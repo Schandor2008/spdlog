@@ -1,4 +1,6 @@
 # Auto generated files
+[Bb]in/
+[Bb]in-int/
 build/*
 *.slo
 *.lo
