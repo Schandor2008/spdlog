@@ -1,6 +1,6 @@
 # spdlog
 
-Very fast, header-only/compiled, C++ logging library. [![Build Status](https://travis-ci.org/gabime/spdlog.svg?branch=master)](https://travis-ci.org/gabime/spdlog)&nbsp; [![Build status](https://ci.appveyor.com/api/projects/status/d2jnxclg20vd0o50?svg=true)](https://ci.appveyor.com/project/gabime/spdlog) [![Release](https://img.shields.io/github/release/gabime/spdlog.svg)](https://github.com/gabime/spdlog/releases/latest)
+Very fast, header-only/compiled, C++ logging library. [![Build Status](https://travis-ci.org/gabime/spdlog.svg?branch=v1.x)](https://travis-ci.org/gabime/spdlog)&nbsp; [![Build status](https://ci.appveyor.com/api/projects/status/d2jnxclg20vd0o50?svg=true)](https://ci.appveyor.com/project/gabime/spdlog) [![Release](https://img.shields.io/github/release/gabime/spdlog.svg)](https://github.com/gabime/spdlog/releases/latest)
 
 ## Install 
 #### Header only version
@@ -35,9 +35,8 @@ $ cmake .. && make -j
 
 ## Features
 * Very fast (see [benchmarks](#benchmarks) below).
-* Headers only or compiled version
+* Headers only or compiled
 * Feature rich formatting, using the excellent [fmt](https://github.com/fmtlib/fmt) library.
-* **New!** [Backtrace](#backtrace-support) support - store debug messages in a ring buffer and display later on demand.
 * Asynchronous mode (optional)
 * [Custom](https://github.com/gabime/spdlog/wiki/3.-Custom-formatting) formatting.
 * Multi/Single threaded loggers.
@@ -50,7 +49,7 @@ $ cmake .. && make -j
     * Easily extendable with custom log targets  (just implement a single function in the [sink](include/spdlog/sinks/sink.h) interface).
 * Log filtering - log levels can be modified in runtime as well as in compile time.
 * Support for loading log levels from argv or from environment var.
-
+* [Backtrace](#backtrace-support) support - store debug messages in a ring buffer and display later on demand.
  
 ## Usage samples
 
@@ -87,20 +86,7 @@ int main()
 }
 
 ```
-#### Load log levels from env variable or from argv
-```c++
-#include "spdlog/cfg/env.h"
-void load_levels_example()
-{
-    // Set the log level to "info" and mylogger to to "trace":
-    // SPDLOG_LEVEL=info,mylogger=trace && ./example
-    spdlog::cfg::load_env_levels();
-    // or from command line:
-    // ./example SPDLOG_LEVEL=info,mylogger=trace
-    // #include "spdlog/cfg/argv.h" // for loading levels from argv
-    // spdlog::cfg::load_argv_levels(args, argv);
-}
-```
+---
 #### Create stdout/stderr logger object
 ```c++
 #include "spdlog/spdlog.h"
@@ -113,6 +99,7 @@ void stdout_example()
     spdlog::get("console")->info("loggers can be retrieved from a global registry using the spdlog::get(logger_name)");
 }
 ```
+
 ---
 #### Basic file logger
 ```c++
@@ -121,7 +108,7 @@ void basic_logfile_example()
 {
     try 
     {
-        auto my_logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
+        auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt");
     }
     catch (const spdlog::spdlog_ex &ex)
     {
@@ -136,7 +123,9 @@ void basic_logfile_example()
 void rotating_example()
 {
     // Create a file rotating logger with 5mb size max and 3 rotated files
-    auto rotating_logger = spdlog::rotating_logger_mt("some_logger_name", "logs/rotating.txt", 1048576 * 5, 3);
+    auto max_size = 1048576 * 5;
+    auto max_files = 3;
+    auto logger = spdlog::rotating_logger_mt("some_logger_name", "logs/rotating.txt", max_size, max_files);
 }
 ```
 
@@ -148,7 +137,7 @@ void rotating_example()
 void daily_example()
 {
     // Create a daily logger - a new file is created every day on 2:30am
-    auto daily_logger = spdlog::daily_logger_mt("daily_logger", "logs/daily.txt", 2, 30);
+    auto logger = spdlog::daily_logger_mt("daily_logger", "logs/daily.txt", 2, 30);
 }
 
 ```
@@ -158,7 +147,8 @@ void daily_example()
 ```c++
 // Loggers can store in a ring buffer all messages (including debug/trace) and display later on demand.
 // When needed, call dump_backtrace() to see them
-spdlog::enable_backtrace(32); // create ring buffer with capacity of 32  messages
+
+spdlog::enable_backtrace(32); // Store the latest 32 messages in a buffer. Older messages will be dropped.
 // or my_logger->enable_backtrace(32)..
 for(int i = 0; i < 100; i++)
 {
@@ -325,7 +315,6 @@ void err_handler_example()
 
 ```
 
-
 ---
 #### syslog 
 ```c++
@@ -349,6 +338,28 @@ void android_example()
 }
 ```
 
+---
+#### Load log levels from env variable or from argv
+
+```c++
+#include "spdlog/cfg/env.h"
+int main (int argc, char *argv[])
+{
+    spdlog::cfg::load_env_levels();
+    // or from command line:
+    // ./example SPDLOG_LEVEL=info,mylogger=trace
+    // #include "spdlog/cfg/argv.h" // for loading levels from argv
+    // spdlog::cfg::load_argv_levels(argc, argv);
+}
+```
+So then you can:
+
+```console
+$ export SPDLOG_LEVEL=info,mylogger=trace
+$ ./example
+```
+
+---
 ## Benchmarks
 
 Below are some [benchmarks](https://github.com/gabime/spdlog/blob/v1.x/bench/bench.cpp) done in Ubuntu 64 bit, Intel i7-4770 CPU @ 3.40GHz
@@ -377,7 +388,7 @@ Below are some [benchmarks](https://github.com/gabime/spdlog/blob/v1.x/bench/ben
 [info] daily_mt         Elapsed: 0.61 secs        1,638,305/sec
 [info] null_mt          Elapsed: 0.16 secs        6,272,758/sec
 ```
-#### ASynchronous mode
+#### Asynchronous mode
 ```
 [info] -------------------------------------------------
 [info] Messages     : 1,000,000
@@ -404,3 +415,9 @@ Below are some [benchmarks](https://github.com/gabime/spdlog/blob/v1.x/bench/ben
 
 ## Documentation
 Documentation can be found in the [wiki](https://github.com/gabime/spdlog/wiki/1.-QuickStart) pages.
+
+---
+
+Thanks to [JetBrains](https://www.jetbrains.com/?from=spdlog) for donating product licenses to help develop **spdlog** <a href="https://www.jetbrains.com/?from=spdlog"><img src="logos/jetbrains-variant-4.svg" width="94" align="center" /></a>
+
+
